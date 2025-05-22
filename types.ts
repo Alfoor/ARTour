@@ -15,11 +15,13 @@ export interface Location {
   arAsset?: string; // Identifier or URL for AR asset
 }
 
+export type LocationId = Location['id'];
+
 export interface Tour {
   id: string;
   name: string;
   description?: string;
-  locations: string[]; // Array of location IDs
+  locations: LocationId[]; // Array of location IDs
 }
 
 export enum FilterType {

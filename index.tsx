@@ -4,11 +4,11 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import './types'; // Ensure types are part of the bundle for context, though not directly used here.
 
-// Check if API_KEY is set (development warning)
-if (!process.env.API_KEY) {
+// Check if API key is set (development warning)
+if (!import.meta.env.VITE_API_KEY) {
   console.warn(
-    `API_KEY environment variable is not set. AI-powered features will be disabled or return an error. 
-    Please ensure the API_KEY is configured in your environment.`
+    `VITE_API_KEY environment variable is not set. AI-powered features will be disabled or return an error.
+    Please ensure the VITE_API_KEY is configured in your environment.`
   );
 }
 
