@@ -1,0 +1,8 @@
+{
+  "name": "London Historical AR Explorer",
+  "description": "Explore historical locations in London with an interactive map, thematic tours, and simulated AR experiences. Discover rich historical information enhanced by AI-powered insights.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}
