@@ -4,28 +4,13 @@ import { GEMINI_TEXT_MODEL, API_KEY_ERROR_MESSAGE } from '../constants';
 
 const API_KEY = process.env.API_KEY;
 
+export const isApiKeyConfigured = (): boolean => !!API_KEY;
+
 let ai: GoogleGenAI | null = null;
 if (API_KEY) {
   ai = new GoogleGenAI({ apiKey: API_KEY });
 }
 
-const parseAndCleanJson = (text: string): any => {
-  let jsonStr = text.trim();
-  const fenceRegex = /^```(\w*)?\s*\n?(.*?)\n?\s*```$/s;
-  const match = jsonStr.match(fenceRegex);
-  if (match && match[2]) {
-    jsonStr = match[2].trim();
-  }
-  try {
-    return JSON.parse(jsonStr);
-  } catch (e) {
-    console.error("Failed to parse JSON response:", e, "Raw string:", jsonStr);
-    // Fallback: return the original text if it's not valid JSON, maybe it's a plain text fallback.
-    // Or throw a custom error to be handled by the caller.
-    // For now, returning null or a specific error object might be better.
-    throw new Error("AI response was not valid JSON.");
-  }
-};
 
 
 export const suggestTourIdea = async (existingThemes: string[], existingTourNames: string[]): Promise<string> => {

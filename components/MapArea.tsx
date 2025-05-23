@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Location } from '../types';
 import L from 'leaflet'; // Import Leaflet
 import Icon from './Icon'; // Import Icon component
+import { LOCATIONS_DATA } from '../constants';
 
 // It's good practice to delete Leaflet's default icon and use custom ones or re-set if needed.
 // Example of fixing default icon path issues if they arise with bundlers:
@@ -27,13 +28,20 @@ const MapArea: React.FC<MapAreaProps> = ({ locations, onPinClick }) => {
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<L.Marker[]>([]);
   const userLocationMarkerRef = useRef<L.CircleMarker | null>(null);
+  const watchIdRef = useRef<number | null>(null);
+
+  const allBounds = L.latLngBounds(LOCATIONS_DATA.map(loc => [loc.coords.lat, loc.coords.lng]));
+  const DEFAULT_CENTER: [number, number] = allBounds.isValid()
+    ? [allBounds.getCenter().lat, allBounds.getCenter().lng]
+    : [51.505, -0.09];
+  const DEFAULT_ZOOM = 12;
 
   // Initialize map
   useEffect(() => {
     if (mapContainerRef.current && !mapInstanceRef.current) {
       const map = L.map(mapContainerRef.current, {
         zoomControl: false // Disable default zoom control to potentially add custom later
-      }).setView([51.505, -0.09], 12); // Centered on London
+      }).setView(DEFAULT_CENTER, DEFAULT_ZOOM);
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -51,6 +59,9 @@ const MapArea: React.FC<MapAreaProps> = ({ locations, onPinClick }) => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
+      }
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
       }
     };
   }, []);
@@ -83,8 +94,8 @@ const MapArea: React.FC<MapAreaProps> = ({ locations, onPinClick }) => {
          map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
       }
     } else if (mapInstanceRef.current) {
-        // If no locations, reset to default view of London
-        mapInstanceRef.current.setView([51.505, -0.09], 12);
+        // If no locations, reset to the average center of all known locations
+        mapInstanceRef.current.setView(DEFAULT_CENTER, DEFAULT_ZOOM);
     }
 
   }, [locations, onPinClick]);
@@ -93,47 +104,54 @@ const MapArea: React.FC<MapAreaProps> = ({ locations, onPinClick }) => {
     if (!mapInstanceRef.current) return;
     const map = mapInstanceRef.current;
 
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          const userLatLng = L.latLng(latitude, longitude);
-
-          // Remove previous user location marker if it exists
-          if (userLocationMarkerRef.current) {
-            userLocationMarkerRef.current.removeFrom(map);
-          }
-
-          // Create a new marker for user's location (e.g., a blue circle)
-          userLocationMarkerRef.current = L.circleMarker(userLatLng, {
-            radius: 8,
-            fillColor: "#3b82f6", // blue-500
-            color: "#ffffff", // white
-            weight: 2,
-            opacity: 1,
-            fillOpacity: 0.8
-          }).addTo(map)
-            .bindTooltip("Your Location", { permanent: false, direction: 'top' });
-          
-          map.setView(userLatLng, 15); // Center map on user and zoom in
-        },
-        (error) => {
-          console.error("Error getting user location:", error);
-          let message = "Could not retrieve your location.";
-          if (error.code === error.PERMISSION_DENIED) {
-            message = "Location access denied. Please enable it in your browser settings.";
-          } else if (error.code === error.POSITION_UNAVAILABLE) {
-            message = "Location information is unavailable.";
-          } else if (error.code === error.TIMEOUT) {
-            message = "The request to get user location timed out.";
-          }
-          alert(message); // Simple alert for now
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
-    } else {
+    if (!navigator.geolocation) {
       console.error("Geolocation is not supported by this browser.");
       alert("Geolocation is not supported by this browser.");
+      return;
+    }
+
+    const onSuccess = (position: GeolocationPosition) => {
+      const { latitude, longitude } = position.coords;
+      const userLatLng = L.latLng(latitude, longitude);
+
+      if (userLocationMarkerRef.current) {
+        userLocationMarkerRef.current.setLatLng(userLatLng);
+      } else {
+        userLocationMarkerRef.current = L.circleMarker(userLatLng, {
+          radius: 8,
+          fillColor: "#3b82f6",
+          color: "#ffffff",
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.8,
+        })
+          .addTo(map)
+          .bindTooltip("Your Location", { permanent: false, direction: "top" });
+      }
+
+      map.setView(userLatLng, 15);
+    };
+
+    const onError = (error: GeolocationPositionError) => {
+      console.error("Error getting user location:", error);
+      let message = "Could not retrieve your location.";
+      if (error.code === error.PERMISSION_DENIED) {
+        message = "Location access denied. Please enable it in your browser settings.";
+      } else if (error.code === error.POSITION_UNAVAILABLE) {
+        message = "Location information is unavailable.";
+      } else if (error.code === error.TIMEOUT) {
+        message = "The request to get user location timed out.";
+      }
+      alert(message);
+    };
+
+    if (watchIdRef.current === null) {
+      watchIdRef.current = navigator.geolocation.watchPosition(onSuccess, onError, {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+      });
+    } else if (userLocationMarkerRef.current) {
+      map.setView(userLocationMarkerRef.current.getLatLng(), 15);
     }
   };
 

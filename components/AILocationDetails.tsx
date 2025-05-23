@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { getMoreLocationDetails } from '../services/geminiService';
+import { getMoreLocationDetails, isApiKeyConfigured } from '../services/geminiService';
 import { Location, GroundingChunk, GroundingMetadata } from '../types';
 import Button from './Button';
 import Icon from './Icon';
@@ -33,11 +33,11 @@ const AILocationDetails: React.FC<AILocationDetailsProps> = ({ location }) => {
     setGroundingSources([]);
 
     try {
-      if (!process.env.API_KEY) {
-        setError(API_KEY_ERROR_MESSAGE);
-        setIsLoading(false);
-        return;
-      }
+        if (!isApiKeyConfigured()) {
+            setError(API_KEY_ERROR_MESSAGE);
+            setIsLoading(false);
+            return;
+        }
       const result = await getMoreLocationDetails(location.name, location.facts);
       if (result.text.startsWith("Error:")) {
         setError(result.text);
@@ -61,13 +61,15 @@ const AILocationDetails: React.FC<AILocationDetailsProps> = ({ location }) => {
       <Button
         onClick={handleTellMeMore}
         isLoading={isLoading}
-        disabled={isLoading || !process.env.API_KEY}
+          disabled={isLoading || !isApiKeyConfigured()}
         className="w-full bg-teal-500 hover:bg-teal-600 text-white text-md"
         leftIcon={<Icon name="chat-circle-dots" />}
       >
         Tell Me More (AI)
       </Button>
-      {!process.env.API_KEY && <p className="mt-2 text-xs text-red-500">{API_KEY_ERROR_MESSAGE}</p>}
+      {!isApiKeyConfigured() && (
+        <p className="mt-2 text-xs text-red-500">{API_KEY_ERROR_MESSAGE}</p>
+      )}
 
       {details && (
         <div className="gemini-response bg-sky-50 border-l-4 border-sky-500 p-3 mt-4 rounded-md text-sm">
