@@ -2,7 +2,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import './types'; // Ensure types are part of the bundle for context, though not directly used here.
 
 // Check if API_KEY is set (development warning)
 if (!process.env.API_KEY) {
